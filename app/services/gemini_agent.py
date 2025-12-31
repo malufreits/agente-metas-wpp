@@ -17,8 +17,22 @@ generation_config = {
     "response_mime_type": "application/json", # FORÇA O FORMATO JSON
 }
 
+# Adicionando função para listar modelos disponíveis
+
+def listar_modelos_disponiveis():
+    """
+    Lista os modelos disponíveis na API do Google Gemini.
+    """
+    modelos = genai.list_models()
+    print("Modelos disponíveis:")
+    for modelo in modelos:
+        print(f"- {modelo['name']}: {modelo['description']}")
+
+# Atualizando o modelo para ser configurável dinamicamente
+model_name = os.environ.get("GEMINI_MODEL_NAME", "gemini-1.5-flash")
+
 model = genai.GenerativeModel(
-    model_name="gemini-1.5-flash",
+    model_name=model_name,
     generation_config=generation_config,
 )
 
