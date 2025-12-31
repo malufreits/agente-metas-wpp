@@ -26,10 +26,10 @@ def listar_modelos_disponiveis():
     modelos = genai.list_models()
     print("Modelos disponíveis:")
     for modelo in modelos:
-        print(f"- {modelo['name']}: {modelo['description']}")
+        print(f"- {modelo.name}: {modelo.description}")
 
 # Atualizando o modelo para ser configurável dinamicamente
-model_name = os.environ.get("GEMINI_MODEL_NAME", "gemini-1.5-flash")
+model_name = os.environ.get("GEMINI_MODEL_NAME", "models/gemini-2.5-flash")
 
 model = genai.GenerativeModel(
     model_name=model_name,
@@ -76,3 +76,13 @@ def verificar_progresso(texto_usuario: str, lista_metas: list):
     
     response = model.generate_content(prompt)
     return json.loads(response.text)
+
+if __name__ == "__main__":
+    # Teste para verificar a chave da API
+    api_key = os.environ.get("GOOGLE_API_KEY")
+    if not api_key:
+        print("Erro: GOOGLE_API_KEY não está configurada.")
+    else:
+        print(f"GOOGLE_API_KEY configurada: {api_key}")
+
+    listar_modelos_disponiveis()
