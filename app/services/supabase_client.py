@@ -1,6 +1,7 @@
 import os
 from supabase import create_client, Client
 from dotenv import load_dotenv
+from datetime import datetime
 
 load_dotenv()
 
@@ -67,3 +68,74 @@ def salvar_historico_diario(telefone: str, analise_ia: list, metas_db: list):
     
     if registros:
         supabase.table("registros_diarios").insert(registros).execute()
+
+def salvar_meta(telefone: str, descricao: str, tipo: str):
+    """
+    Salva uma meta no banco de dados.
+    tipo: "diaria" ou "mensal"
+    """
+    data = {
+        "telefone_user": telefone,
+        "descricao": descricao,
+        "tipo": tipo
+    }
+    supabase.table("metas").insert(data).execute()
+
+def listar_metas(telefone: str, tipo: str):
+    """
+    Lista metas do tipo especificado (diária ou mensal) para um usuário.
+    """
+    response = supabase.table("metas").select("id, descricao, tipo").eq("telefone_user", telefone).eq("tipo", tipo).execute()
+    return response.data
+
+def registrar_historico_meta(meta_id: int, data: str, atingida: bool):
+    """
+    Registra no histórico se uma meta foi atingida em uma data específica.
+    """
+    registro = {
+        "meta_id": meta_id,
+        "data": data,
+        "atingida": atingida
+    }
+    supabase.table("historico_metas").insert(registro).execute()
+
+def listar_historico_meta(meta_id: int):
+    """
+    Lista o histórico de uma meta específica.
+    """
+    response = supabase.table("historico_metas").select("data, atingida").eq("meta_id", meta_id).execute()
+    return response.data
+
+def cadastrar_metas_anuais(telefone: str, metas: list):
+    """
+    Cadastra metas diárias para o ano inteiro.
+    """
+    for meta in metas:
+        salvar_meta(telefone, meta, "diaria")
+
+def cadastrar_metas_mensais(telefone: str, metas: list):
+    """
+    Cadastra metas mensais no início de cada mês.
+    """
+    for meta in metas:
+        salvar_meta(telefone, meta, "mensal")
+
+def gerar_relatorio_mensal(telefone: str):
+    """
+    Gera um relatório comparativo entre as metas mensais e o que foi atingido.
+    """
+    metas_mensais = listar_metas(telefone, "mensal")
+    relatorio = []
+
+    for meta in metas_mensais:
+        historico = listar_historico_meta(meta['id'])
+        atingidas = [h for h in historico if h['atingida']]
+        nao_atingidas = [h for h in historico if not h['atingida']]
+
+        relatorio.append({
+            "meta": meta['descricao'],
+            "atingidas": len(atingidas),
+            "nao_atingidas": len(nao_atingidas)
+        })
+
+    return relatorio
