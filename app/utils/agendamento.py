@@ -8,10 +8,11 @@ from app.services.supabase_client import (
     cadastrar_metas_mensais,
     gerar_relatorio_mensal,
 )
+from app.services.whatsapp import enviar_mensagem, receber_resposta
 
 def perguntar_metas():
     # Aqui você pode integrar com o WhatsApp para enviar mensagens
-    usuarios = ["+5511999999999"]  # Substituir pela lógica de listar usuários
+    usuarios = ["+5531994381418"]  # Substituir pela lógica de listar usuários
     for telefone in usuarios:
         metas_diarias = listar_metas(telefone, "diaria")
         metas_mensais = listar_metas(telefone, "mensal")
@@ -30,27 +31,31 @@ def perguntar_metas():
             atingida = input().strip().lower() == "sim"
             registrar_historico_meta(meta['id'], datetime.now().strftime("%Y-%m-%d"), atingida)
 
-def cadastrar_metas_inicio_ano():
-    usuarios = ["+5511999999999"]  # Substituir pela lógica de listar usuários
-    metas_anuais = ["Beber 2L de água", "Exercitar-se diariamente"]  # Exemplo
+def solicitar_metas_anuais():
+    usuarios = ["+5531994381418"]  # Substituir pela lógica de listar usuários
     for telefone in usuarios:
-        cadastrar_metas_anuais(telefone, metas_anuais)
+        enviar_mensagem(telefone, "Por favor, envie suas metas diárias para o ano.")
+        resposta = receber_resposta(telefone)  # Captura a resposta do usuário
+        metas = resposta.split(";")  # Supondo que o usuário separa as metas por ponto e vírgula
+        cadastrar_metas_anuais(telefone, metas)
 
-def cadastrar_metas_inicio_mes():
-    usuarios = ["+5511999999999"]  # Substituir pela lógica de listar usuários
-    metas_mensais = ["Não beber refrigerante", "Ler 1 livro"]  # Exemplo
+def solicitar_metas_mensais():
+    usuarios = ["+5531994381418"]  # Substituir pela lógica de listar usuários
     for telefone in usuarios:
-        cadastrar_metas_mensais(telefone, metas_mensais)
+        enviar_mensagem(telefone, "Por favor, envie suas metas mensais para este mês.")
+        resposta = receber_resposta(telefone)  # Captura a resposta do usuário
+        metas = resposta.split(";")  # Supondo que o usuário separa as metas por ponto e vírgula
+        cadastrar_metas_mensais(telefone, metas)
 
 def gerar_relatorio_fim_mes():
-    usuarios = ["+5511999999999"]  # Substituir pela lógica de listar usuários
+    usuarios = ["+5531994381418"]  # Substituir pela lógica de listar usuários
     for telefone in usuarios:
         relatorio = gerar_relatorio_mensal(telefone)
         print(f"Relatório para {telefone}: {relatorio}")  # Substituir por envio via WhatsApp
 
 # Agendar tarefas
-schedule.every().year.at("00:00").do(cadastrar_metas_inicio_ano)
-schedule.every().month.at("00:00").do(cadastrar_metas_inicio_mes)
+schedule.every().year.at("00:00").do(solicitar_metas_anuais)
+schedule.every().month.at("00:00").do(solicitar_metas_mensais)
 schedule.every().month.at("23:59").do(gerar_relatorio_fim_mes)
 # Agendar a tarefa para rodar toda noite às 21:00
 schedule.every().day.at("21:00").do(perguntar_metas)
