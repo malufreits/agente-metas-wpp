@@ -181,7 +181,7 @@ async def receive_whatsapp(request: Request):
         # FLUXO 3: REGISTRO DIÁRIO
         if fase == 'ATIVO':
             metas_db = supabase_client.get_metas(telefone)
-            lista_nomes_metas = [m['descricao_meta'] for m in metas_db]
+            lista_nomes_metas = [m['descricao'] for m in metas_db]
 
             analise = gemini_agent.verificar_progresso(msg_texto, lista_nomes_metas)
             itens_analisados = analise.get('analise', [])
