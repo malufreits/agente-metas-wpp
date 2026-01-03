@@ -36,6 +36,27 @@ def processar_resposta(telefone: str, mensagem: str):
     """
     mensagem = mensagem.strip().lower()
 
+    if mensagem in ["oi", "olá", "ola"]:
+        # Responder a mensagens genéricas
+        enviar_mensagem(telefone, "Olá! Você gostaria de criar metas diárias ou mensais? Responda com 'diária' ou 'mensal'.")
+        return
+
+    if mensagem == "diária":
+        enviar_mensagem(telefone, "Quais são suas metas diárias? Envie separadas por ponto e vírgula.")
+        resposta = receber_resposta(telefone)
+        metas = resposta.split(";")
+        salvar_metas(telefone, metas, tipo="diaria")
+        enviar_mensagem(telefone, "Suas metas diárias foram registradas com sucesso!")
+        return
+
+    if mensagem == "mensal":
+        enviar_mensagem(telefone, "Quais são suas metas mensais? Envie separadas por ponto e vírgula.")
+        resposta = receber_resposta(telefone)
+        metas = resposta.split(";")
+        salvar_metas(telefone, metas, tipo="mensal")
+        enviar_mensagem(telefone, "Suas metas mensais foram registradas com sucesso!")
+        return
+
     if mensagem.startswith("metas diarias:"):
         # Processar metas diárias
         metas = mensagem.replace("metas diarias:", "").split(";")
