@@ -169,9 +169,10 @@ async def receive_whatsapp(request: Request):
                 whatsapp.enviar_mensagem(telefone, "Não entendi. Tente listar simples: 'Correr, Ler, Estudar'.")
                 return {"status": "erro_ia"}
 
+            # Apenas muda para 'ONBOARDING' se metas forem enviadas
             supabase_client.salvar_metas(telefone, lista_metas, tipo="diaria")
             supabase_client.atualizar_fase(telefone, 'ATIVO')
-            
+
             whatsapp.enviar_mensagem(
                 telefone, 
                 f"Perfeito! Cadastrei: {', '.join(lista_metas)}.\n\nAmanhã começo a te cobrar! 🫡"
