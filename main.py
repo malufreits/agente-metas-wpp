@@ -58,7 +58,7 @@ def job_resumo_mensal():
         
         # Busca as metas e o histórico DESSE usuário específico
         # Nota: Estamos acessando o cliente raw (supabase_client.client)
-        metas = supabase_client.client.table("metas_config").select("*").eq("telefone", telefone).execute()
+        metas = supabase_client.client.table("metas").select("*").eq("telefone", telefone).execute()
         historico = supabase_client.client.table("historico").select("*").eq("telefone", telefone)\
             .gte("data", data_inicio).lte("data", data_fim).execute()
 

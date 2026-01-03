@@ -49,10 +49,10 @@ def salvar_metas(telefone: str, lista_metas: list):
         dados.append({"telefone_user": telefone, "descricao_meta": meta})
     
     if dados:
-        supabase.table("metas_config").insert(dados).execute()
+        supabase.table("metas").insert(dados).execute()
 
 def get_metas(telefone: str):
-    response = supabase.table("metas_config").select("id, descricao_meta").eq("telefone_user", telefone).execute()
+    response = supabase.table("metas").select("id, descricao, tipo").eq("telefone_user", telefone).execute()
     return response.data
 
 def salvar_historico_diario(telefone: str, analise_ia: list, metas_db: list):
