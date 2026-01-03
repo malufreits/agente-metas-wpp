@@ -24,9 +24,12 @@ def get_user(telefone: str):
         return response.data[0]
     return None
 
-def create_user(telefone: str):
+def create_user(telefone: str, nome: str = "Usuário"):
+    """
+    Cria um novo usuário com um valor padrão para o nome caso não seja fornecido.
+    """
     telefone = normalizar_telefone(telefone)
-    data = {"telefone": telefone, "fase": "ONBOARDING"}
+    data = {"telefone": telefone, "nome": nome, "fase": "ONBOARDING"}
     supabase.table("usuarios").insert(data).execute()
 
 def listar_usuarios_ativos():
