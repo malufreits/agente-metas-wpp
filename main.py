@@ -103,7 +103,6 @@ async def receive_whatsapp(request: Request):
         user = supabase_client.get_user(telefone)
         if not user:
             supabase_client.create_user(telefone)
-            # Define fase inicial explicitamente
             supabase_client.atualizar_fase(telefone, 'SETUP_DIARIA')
             whatsapp.enviar_mensagem(
                 telefone, 
@@ -111,22 +110,36 @@ async def receive_whatsapp(request: Request):
             )
             return {"status": "novo_usuario"}
 
-        # 2. BOTÃO DE PÂNICO / RESET (Resolve o problema do loop)
-        # Se o usuário mandar qualquer uma dessas palavras, reinicia o cadastro.
-        palavras_reset = ["oi", "ola", "olá", "reset", "inicio", "começar", "configurar"]
-        
-        if msg_texto.lower() in palavras_reset:
-            supabase_client.atualizar_fase(telefone, 'SETUP_DIARIA')
-            whatsapp.enviar_mensagem(
-                telefone, 
-                "🔄 Vamos reconfigurar suas metas!\n\nPasso 1: Envie suas **METAS DIÁRIAS** (ex: Ler 10 pag, Academia)."
-            )
-            return {"status": "reset_flow"}
-
         # Recupera a fase atual
         fase = user.get('fase', 'SETUP_DIARIA')
 
-        # --- FASE 1: CADASTRAR DIÁRIAS ---
+        # --- 2. COMANDOS ESPECIAIS ---
+        msg_lower = msg_texto.lower()
+
+        # A) RESET REAL (Só se você pedir explicitamente)
+        comandos_reset = ["reset", "reiniciar", "configurar", "mudar metas", "começar do zero"]
+        if any(cmd in msg_lower for cmd in comandos_reset):
+            supabase_client.atualizar_fase(telefone, 'SETUP_DIARIA')
+            whatsapp.enviar_mensagem(
+                telefone, 
+                "🔄 Entendido! Vamos reconfigurar suas metas do zero.\n\nPasso 1: Envie suas novas **METAS DIÁRIAS**."
+            )
+            return {"status": "reset_flow"}
+
+        # B) CUMPRIMENTOS (Educação)
+        cumprimentos = ["oi", "ola", "olá", "bom dia", "boa tarde", "boa noite"]
+        if msg_lower in cumprimentos:
+            if fase == 'ATIVO':
+                whatsapp.enviar_mensagem(telefone, "Opa! 👋 Estou por aqui. Se já fez alguma meta hoje, é só me contar!")
+                return {"status": "cumprimento_ativo"}
+            else:
+                # Se ainda não terminou de configurar, o "Oi" serve para lembrar
+                whatsapp.enviar_mensagem(telefone, "Olá! Ainda estamos configurando. Veja a mensagem acima e me responda. 👆")
+                return {"status": "cumprimento_setup"}
+
+        # --- 3. FLUXOS DE FASE ---
+
+        # FASE 1: CADASTRAR DIÁRIAS
         if fase == 'SETUP_DIARIA':
             resultado_ia = gemini_agent.extrair_novas_metas(msg_texto)
             lista_metas = resultado_ia.get('metas', [])
@@ -135,8 +148,7 @@ async def receive_whatsapp(request: Request):
                 whatsapp.enviar_mensagem(telefone, "Não entendi suas metas diárias. Tente listar simples: 'Correr, Ler, Estudar'.")
                 return {"status": "erro_ia_diaria"}
 
-            # Salva como DIARIA e avança fase
-            # IMPORTANTE: Garanta que seu supabase_client.salvar_metas aceita o parametro 'tipo'
+            # Importante: Sua função salvar_metas deve aceitar o parametro tipo="diaria"
             supabase_client.salvar_metas(telefone, lista_metas, tipo="diaria")
             supabase_client.atualizar_fase(telefone, 'SETUP_MENSAL')
             
@@ -146,39 +158,45 @@ async def receive_whatsapp(request: Request):
             )
             return {"status": "diarias_ok"}
 
-        # --- FASE 2: CADASTRAR MENSAIS ---
+        # FASE 2: CADASTRAR MENSAIS
         if fase == 'SETUP_MENSAL':
-            resultado_ia = gemini_agent.extrair_novas_metas(msg_texto)
-            lista_metas = resultado_ia.get('metas', [])
+            if "pular" in msg_lower:
+                 lista_metas = [] # Lista vazia se pular
+            else:
+                resultado_ia = gemini_agent.extrair_novas_metas(msg_texto)
+                lista_metas = resultado_ia.get('metas', [])
+                if not lista_metas:
+                    whatsapp.enviar_mensagem(telefone, "Não entendi. Mande suas metas mensais ou digite 'Pular'.")
+                    return {"status": "erro_ia_mensal"}
 
-            if not lista_metas:
-                whatsapp.enviar_mensagem(telefone, "Não entendi. Mande suas metas mensais ou digite 'Pular'.")
-                return {"status": "erro_ia_mensal"}
-
-            # Salva como MENSAL e finaliza cadastro
-            supabase_client.salvar_metas(telefone, lista_metas, tipo="mensal")
+            # Salva (se tiver) e finaliza
+            if lista_metas:
+                supabase_client.salvar_metas(telefone, lista_metas, tipo="mensal")
+            
             supabase_client.atualizar_fase(telefone, 'ATIVO')
             
             whatsapp.enviar_mensagem(
                 telefone, 
-                "🎉 Tudo configurado! \n\nVocê está na fase **ATIVO**. Todos os dias às 20h passarei aqui para cobrar suas metas. Pode deixar comigo! 🫡"
+                "🎉 Tudo pronto! \n\nAgora você está na fase **ATIVO**. Pode viver sua vida que às 20h eu passo para cobrar. Se quiser registrar algo antes, é só mandar aqui! 🫡"
             )
             return {"status": "mensais_ok"}
 
-        # --- FASE 3: VIDA NORMAL (ATIVO) ---
+        # FASE 3: VIDA NORMAL (ATIVO)
         if fase == 'ATIVO':
             metas_db = supabase_client.get_metas(telefone)
-            lista_nomes_metas = [m['descricao'] for m in metas_db]
+            # Garante que pega descrição correta independente do nome da coluna
+            lista_nomes_metas = [m.get('descricao') or m.get('descricao_meta') for m in metas_db]
 
             if not lista_nomes_metas:
-                 whatsapp.enviar_mensagem(telefone, "Você não tem metas ativas. Digite 'Reset' para configurar.")
+                 whatsapp.enviar_mensagem(telefone, "Ops, não achei metas ativas. Digite 'Reset' para configurar.")
                  return {"status": "sem_metas"}
 
             analise = gemini_agent.verificar_progresso(msg_texto, lista_nomes_metas)
             itens_analisados = analise.get('analise', [])
             
             if not itens_analisados:
-                 whatsapp.enviar_mensagem(telefone, "Não entendi o que você realizou. Tente ser mais específico.")
+                 # Se falou algo nada a ver e não é "Oi", o bot avisa
+                 whatsapp.enviar_mensagem(telefone, "Não entendi se você cumpriu alguma meta. Tente: 'Hoje eu corri e li'.")
                  return {"status": "erro_analise"}
 
             supabase_client.salvar_historico_diario(telefone, itens_analisados, metas_db)
