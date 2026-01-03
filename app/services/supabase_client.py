@@ -40,13 +40,13 @@ def listar_usuarios_ativos():
 def atualizar_fase(telefone: str, nova_fase: str):
     supabase.table("usuarios").update({"fase": nova_fase}).eq("telefone", telefone).execute()
 
-def salvar_metas(telefone: str, lista_metas: list):
-    # Primeiro limpamos metas antigas se houver, para evitar duplicidade na reconfiguração
-    # (Opcional, depende da lógica que você quer)
-
+def salvar_metas(telefone: str, lista_metas: list, tipo: str):
+    """
+    Salva metas no banco de dados com o tipo especificado (diaria ou mensal).
+    """
     dados = []
     for meta in lista_metas:
-        dados.append({"telefone_user": telefone, "descricao": meta})
+        dados.append({"telefone_user": telefone, "descricao": meta, "tipo": tipo})
 
     if dados:
         supabase.table("metas").insert(dados).execute()
