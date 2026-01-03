@@ -139,3 +139,40 @@ def gerar_relatorio_mensal(telefone: str):
         })
 
     return relatorio
+
+def criar_meta(telefone: str, descricao: str, tipo: str):
+    """
+    Cria uma nova meta (diária ou mensal) para o usuário.
+    """
+    data = {
+        "telefone_user": telefone,
+        "descricao": descricao,
+        "tipo": tipo
+    }
+    supabase.table("metas").insert(data).execute()
+
+def listar_metas_por_tipo(telefone: str, tipo: str):
+    """
+    Lista metas do tipo especificado (diária ou mensal) para um usuário.
+    """
+    response = supabase.table("metas").select("id, descricao, tipo").eq("telefone_user", telefone).eq("tipo", tipo).execute()
+    return response.data
+
+def registrar_resposta_diaria(telefone: str, meta_id: int, data: str, atingida: bool):
+    """
+    Registra a resposta diária do usuário para uma meta específica.
+    """
+    registro = {
+        "telefone_user": telefone,
+        "meta_id": meta_id,
+        "data": data,
+        "atingida": atingida
+    }
+    supabase.table("respostas_diarias").insert(registro).execute()
+
+def listar_respostas_diarias(telefone: str, data: str):
+    """
+    Lista todas as respostas diárias de um usuário para uma data específica.
+    """
+    response = supabase.table("respostas_diarias").select("meta_id, atingida").eq("telefone_user", telefone).eq("data", data).execute()
+    return response.data

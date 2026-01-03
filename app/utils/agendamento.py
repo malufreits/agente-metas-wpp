@@ -11,7 +11,6 @@ from app.services.supabase_client import (
 from app.services.whatsapp import enviar_mensagem, receber_resposta
 
 def perguntar_metas():
-    # Aqui você pode integrar com o WhatsApp para enviar mensagens
     usuarios = ["+5531994381418"]  # Substituir pela lógica de listar usuários
     for telefone in usuarios:
         metas_diarias = listar_metas(telefone, "diaria")
@@ -19,17 +18,44 @@ def perguntar_metas():
 
         # Perguntar sobre metas diárias
         for meta in metas_diarias:
-            print(f"Você atingiu a meta diária '{meta['descricao']}'? (Sim/Não)")
-            # Registrar resposta (simulação)
-            atingida = input().strip().lower() == "sim"
-            registrar_historico_meta(meta['id'], datetime.now().strftime("%Y-%m-%d"), atingida)
+            enviar_mensagem(telefone, f"Você atingiu a meta diária '{meta['descricao']}'? (Sim/Não)")
 
         # Perguntar sobre metas mensais
         for meta in metas_mensais:
-            print(f"Você atingiu a meta mensal '{meta['descricao']}'? (Sim/Não)")
-            # Registrar resposta (simulação)
-            atingida = input().strip().lower() == "sim"
-            registrar_historico_meta(meta['id'], datetime.now().strftime("%Y-%m-%d"), atingida)
+            enviar_mensagem(telefone, f"Você atingiu a meta mensal '{meta['descricao']}'? (Sim/Não)")
+
+def processar_resposta(telefone: str, mensagem: str):
+    """
+    Processa a resposta do usuário e registra no banco de dados.
+    """
+    mensagem = mensagem.strip().lower()
+
+    if mensagem.startswith("metas diarias:"):
+        # Processar metas diárias
+        metas = mensagem.replace("metas diarias:", "").split(";")
+        for meta in metas:
+            criar_meta(telefone, meta.strip(), "diaria")
+        enviar_mensagem(telefone, "Suas metas diárias foram registradas com sucesso!")
+        return
+
+    if mensagem.startswith("metas mensais:"):
+        # Processar metas mensais
+        metas = mensagem.replace("metas mensais:", "").split(";")
+        for meta in metas:
+            criar_meta(telefone, meta.strip(), "mensal")
+        enviar_mensagem(telefone, "Suas metas mensais foram registradas com sucesso!")
+        return
+
+    # Processar respostas sobre metas atingidas
+    metas_diarias = listar_metas(telefone, "diaria")
+    metas_mensais = listar_metas(telefone, "mensal")
+
+    for meta in metas_diarias + metas_mensais:
+        if meta['descricao'].lower() in mensagem:
+            atingida = "sim" in mensagem
+            registrar_resposta_diaria(telefone, meta['id'], datetime.now().strftime("%Y-%m-%d"), atingida)
+            enviar_mensagem(telefone, f"Resposta registrada para a meta: {meta['descricao']}")
+            break
 
 def solicitar_metas_anuais():
     usuarios = ["+5531994381418"]  # Substituir pela lógica de listar usuários
