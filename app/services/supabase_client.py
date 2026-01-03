@@ -10,13 +10,22 @@ key: str = os.environ.get("SUPABASE_KEY")
 
 supabase: Client = create_client(url, key)
 
+def normalizar_telefone(telefone: str) -> str:
+    """
+    Remove caracteres extras e normaliza o formato do telefone.
+    Exemplo: +5531994381418 -> 5531994381418
+    """
+    return telefone.replace("+", "").strip()
+
 def get_user(telefone: str):
+    telefone = normalizar_telefone(telefone)
     response = supabase.table("usuarios").select("*").eq("telefone", telefone).execute()
     if response.data:
         return response.data[0]
     return None
 
 def create_user(telefone: str):
+    telefone = normalizar_telefone(telefone)
     data = {"telefone": telefone, "fase": "ONBOARDING"}
     supabase.table("usuarios").insert(data).execute()
 
@@ -70,6 +79,7 @@ def salvar_historico_diario(telefone: str, analise_ia: list, metas_db: list):
         supabase.table("registros_diarios").insert(registros).execute()
 
 def salvar_meta(telefone: str, descricao: str, tipo: str):
+    telefone = normalizar_telefone(telefone)
     """
     Salva uma meta no banco de dados.
     tipo: "diaria" ou "mensal"
@@ -159,6 +169,7 @@ def listar_metas_por_tipo(telefone: str, tipo: str):
     return response.data
 
 def registrar_resposta_diaria(telefone: str, meta_id: int, data: str, atingida: bool):
+    telefone = normalizar_telefone(telefone)
     """
     Registra a resposta diária do usuário para uma meta específica.
     """
